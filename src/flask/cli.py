@@ -1018,20 +1018,34 @@ def routes_command(sort: str, all_methods: bool) -> None:
         for rule in rules
     ]
 
-    headers = ("Endpoint", "Methods", "Rule")
+    subdomain_lengths = [len(str(rule.subdomain)) for rule in rules]
+    extra_headers: t.Tuple = tuple()
+    extra_widths: t.Tuple = tuple()
+    extra_columns: str = ""
+    extra_attributes: t.Tuple = tuple()
+    max_subdomain_length = max(subdomain_lengths)
+    if max_subdomain_length:
+        extra_headers = ("Subdomain",)
+        extra_widths = (max_subdomain_length,)
+        extra_columns = "  {{3:<{3}}}"
+        extra_attributes = ("subdomain",)
+
+    headers = (*extra_headers, "Endpoint", "Methods", "Rule")
     widths = (
+        *extra_widths,
         max(len(rule.endpoint) for rule in rules),
         max(len(methods) for methods in rule_methods),
         max(len(rule.rule) for rule in rules),
     )
     widths = [max(len(h), w) for h, w in zip(headers, widths)]
-    row = "{{0:<{0}}}  {{1:<{1}}}  {{2:<{2}}}".format(*widths)
+    row = ("{{0:<{0}}}  {{1:<{1}}}  {{2:<{2}}}" + extra_columns).format(*widths)
 
     click.echo(row.format(*headers).strip())
     click.echo(row.format(*("-" * width for width in widths)))
 
     for rule, methods in zip(rules, rule_methods):
-        click.echo(row.format(rule.endpoint, methods, rule.rule).rstrip())
+        extra = [getattr(rule, extra_attribute) for extra_attribute in extra_attributes]
+        click.echo(row.format(*extra, rule.endpoint, methods, rule.rule).rstrip())
 
 
 cli = FlaskGroup(
